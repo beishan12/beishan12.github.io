@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BS AI</title>
+    <script src="./config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        body {
+            display: flex;
+            height: 100vh;
+            background-color: #0F172A;
+            color: #E2E8F0;
+            overflow: hidden;
+        }
+        /*左侧侧边栏*/
+        .sidebar {
+            width: 240px;
+            background-color: #1E293B;
+            padding: 30px 16px;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar-title {
+            font-size: 26px;
+            font-weight: bold;
+            text-align: center;
+            color: #60A5FA;
+            margin-bottom: 28px;
+        }
+        #newChatBtn {
+            width: 100%;
+            background-color: #2563EB;
+            border: none;
+            color: white;
+            font-size: 16px;
+            padding: 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 16px;
+        }
+        .chat-item {
+            width: 100%;
+            padding: 12px 10px;
+            background: #334155;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            font-size: 15px;
+        }
+        .chat-item.active {
+            background-color: #475569;
+        }
+        #chatList {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        /*右侧主区域*/
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 30px;
+        }
+        .think-option {
+            margin-bottom: 20px;
+            font-size:16px;
+        }
+        /*消息盒子*/
+        .message-wrap {
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        .msg {
+            margin:16px auto;
+            max-width:70%;
+            border-radius:12px;
+            padding:14px 16px;
+            font-size:15px;
+        }
+        .user-msg {
+            background-color:#1E3A5F;
+            margin-left: auto;
+        }
+        .ai-msg {
+            background-color:#1F2937;
+            margin-right: auto;
+        }
+        .think-block {
+            background:#3b2020;
+            padding:10px;
+            border-left:3px #f87171 solid;
+            font-size:13px;
+            color:#fca5a5;
+            margin-bottom:10px;
+            border-radius:4px;
+        }
+        /*代码复制按钮*/
+        pre {
+            position: relative;
+            padding:30px 12px 12px;
+            border-radius:6px;
+            overflow-x:auto;
+        }
+        .copy-btn {
+            position:absolute;
+            top:6px;
+            right:8px;
+            padding:3px 8px;
+            background:#444444;
+            color:#fff;
+            border:none;
+            border-radius:4px;
+            cursor:pointer;
+            font-size:12px;
+        }
+        /*底部输入栏*/
+        .input-area{
+            display:flex;
+            gap:12px;
+            margin-top:20px;
+        }
+        #userInput{
+            flex:1;
+            height:85px;
+            background:#1E293B;
+            border:1px solid #334155;
+            border-radius:8px;
+            padding:12px;
+            color:#fff;
+            font-size:15px;
+            resize:none;
+        }
+        #sendBtn{
+            width:90px;
+            background:#2563EB;
+            color:white;
+            border:none;
+            border-radius:8px;
+            font-size:16px;
+            cursor:pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-title">BS AI</div>
+        <button id="newChatBtn" onclick="createNewChat()">新建对话</button>
+        <div id="chatList"></div>
+    </div>
+    <div class="main-container">
+        <div class="think-option">
+            <input type="checkbox" id="deepThink">
+            <label for="deepThink">开启深度思考</label>
+        </div>
+        <div class="message-wrap" id="messageWrap"></div>
+        <div class="input-area">
+            <textarea id="userInput" placeholder="输入问题，Shift+Enter换行，Enter发送"></textarea>
+            <button id="sendBtn" onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        let chatListData = JSON.parse(localStorage.getItem("bs_ai_data")) || [];
+        let currentChatId = null;
+        let loading = false;
+        const deepThink = document.getElementById("deepThink");
+        const {API_KEY,API_URL,MODEL} = CONFIG;
+
+        marked.setOptions({
+            highlight(code, lang) {
+                const html = hljs.highlightAuto(code).value;
+                return `<pre><button class="copy-btn" onclick="copyCode(this)">复制代码</button><code class="hljs ${lang}">${html}</code></pre>`;
+            }
+        })
+        window.copyCode = async function (btn) {
+            let code = btn.nextElementSibling.innerText.trim();
+            await navigator.clipboard.writeText(code);
+            btn.textContent = "已复制";
+            setTimeout(() => btn.textContent = "复制代码", 1200);
+        }
+        function htmlEscape(str) {
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+        //会话列表
+        function renderChatList() {
+            const listDom = document.getElementById("chatList");
+            listDom.innerHTML = "";
+            chatListData.forEach(item => {
+                const div = document.createElement("div");
+                div.className = "chat-item" + (item.id === currentChatId ? " active" : "");
+                div.innerText = item.title;
+                div.onclick = () => selectChat(item.id);
+                listDom.appendChild(div);
+            })
+            localStorage.setItem("bs_ai_data", JSON.stringify(chatListData));
+        }
+        function createNewChat() {
+            const id = Date.now().toString();
+            chatListData.push({
+                id,
+                title: "新对话",
+                messages: []
+            })
+            selectChat(id);
+        }
+        function selectChat(id) {
+            currentChatId = id;
+            renderChatList();
+            renderMessages();
+        }
+        function getCurrentSession() {
+            return chatListData.find(x => x.id === currentChatId);
+        }
+        //渲染历史消息
+        function renderMessages() {
+            const box = document.getElementById("messageWrap");
+            box.innerHTML = "";
+            const session = getCurrentSession();
+            if (!session) return;
+            session.messages.forEach(msg => {
+                if (msg.role === "user") {
+                    box.innerHTML += `<div class="msg user-msg">${htmlEscape(msg.content)}</div>`
+                } else {
+                    let thinkHtml = "";
+                    let content = msg.content;
+                    const thinkPat = /([\s\S]*?)<\/think>/;
+                    const res = content.match(thinkPat);
+                    if (res) {
+                        thinkHtml = `<div class="think-block">思考过程：${htmlEscape(res[1])}</div>`;
+                        content = content.replace(thinkPat, "");
+                    }
+                    box.innerHTML += `<div class="msg ai-msg">${thinkHtml}${marked.parse(content)}</div>`;
+                }
+            })
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function sendMessage() {
+            if (loading) return;
+            const input = document.getElementById("userInput");
+            const text = input.value.trim();
+            if (!text) return;
+            if (!currentChatId) createNewChat();
+            const session = getCurrentSession();
+            session.messages.push({ role: "user", content: text });
+            renderMessages();
+            input.value = "";
+            loading = true;
+
+            const history = session.messages.map(m => ({ role: m.role, content: m.content }));
+            const postBody = {
+                model: MODEL,
+                messages: history,
+                temperature: 0.7,
+                stream: true
+            }
+            if (deepThink.checked) {
+                postBody.reasoning_effort = "high";
+                postBody.thinking = { type: "enabled" };
+            } else {
+                postBody.thinking = { type: "disabled" };
+            }
+
+            const chatBox = document.getElementById("messageWrap");
+            const aiDom = document.createElement("div");
+            aiDom.className = "msg ai-msg";
+            chatBox.appendChild(aiDom);
+            let fullText = "";
+            try {
+                const resp = await fetch(API_URL, {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${API_KEY}`,
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(postBody)
+                })
+                const reader = resp.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split("\n").filter(line => line.startsWith("data: "));
+                    for (let line of lines) {
+                        let dataStr = line.replace("data: ", "");
+                        if (dataStr === "[DONE]") continue;
+                        try {
+                            const obj = JSON.parse(dataStr);
+                            const delta = obj?.choices?.[0]?.delta?.content || "";
+                            if (delta) {
+                                fullText += delta;
+                                let thinkHtml = "";
+                                let show = fullText;
+                                const match = show.match(/([\s\S]*?)<\/think>/);
+                                if (match) {
+                                    thinkHtml = `<div class="think-block">思考过程：${htmlEscape(match[1])}</div>`;
+                                    show = show.replace(/([\s\S]*?)<\/think>/, "");
+                                }
+                                aiDom.innerHTML = thinkHtml + marked.parse(show);
+                                chatBox.scrollTop = chatBox.scrollHeight;
+                            }
+                        } catch (err) { }
+                    }
+                }
+                session.messages.push({ role: "assistant", content: fullText });
+                if (session.messages.length === 2) {
+                    session.title = text.substring(0, 16);
+                    renderChatList();
+                }
+                localStorage.setItem("bs_ai_data", JSON.stringify(chatListData));
+            } catch (err) {
+                console.error(err);
+                if (err.toString().includes("CORS")) {
+                    aiDom.innerText = "跨域错误：安装Allow‑CORS插件开启后刷新页面";
+                } else {
+                    aiDom.innerText = "请求失败：" + err.message;
+                }
+            }
+            loading = false;
+        }
+        //回车发送快捷键
+        document.getElementById("userInput").addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        })
+        renderChatList();
+        if (chatListData.length === 0) createNewChat();
+    </script>
+</body>
+</html>
