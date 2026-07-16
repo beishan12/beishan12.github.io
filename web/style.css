@@ -1,0 +1,98 @@
+/* 全局夜间模式基础样式 */
+body {
+    background-color: #121212; /* 黑色系背景 */
+    color: #e0e0e0; /* 浅灰色文字，保证可读性 */
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+}
+
+/* 导航栏样式适配 */
+.nav {
+    background-color: #1e1e1e; /* 导航栏深灰背景 */
+    padding: 15px;
+    margin-bottom: 20px;
+}
+
+.nav a {
+    color: #e0e0e0; /* 导航文字浅灰 */
+    text-decoration: none;
+    margin: 0 15px;
+    font-size: 16px;
+}
+
+.nav a:hover {
+    color: #ffffff; /* hover时纯白高亮 */
+}
+
+/* 容器样式适配 */
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+/* 卡片样式适配 */
+.card {
+    background-color: #1e1e1e; /* 卡片深灰背景 */
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+}
+
+/* 下载链接样式适配 */
+.download-link {
+    display: inline-block;
+    background-color: #333333; /* 按钮深灰背景 */
+    color: #ffffff; /* 按钮文字白色 */
+    padding: 8px 16px;
+    text-decoration: none;
+    border-radius: 4px;
+    margin: 10px 0;
+}
+
+.download-link:hover {
+    background-color: #444444; /* hover时稍浅的灰 */
+}
+
+/* 更新包/安装包列表样式适配 */
+.file-list {
+    list-style: none;
+    padding: 0;
+}
+
+.file-list li {
+    background-color: #1e1e1e;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+}
+
+.version {
+    font-weight: bold;
+    margin-right: 20px;
+}
+
+.date {
+    color: #999999; /* 日期浅灰 */
+}
+
+/* 页脚样式适配 */
+.footer {
+    text-align: center;
+    padding: 20px;
+    background-color: #1e1e1e;
+    color: #999999;
+    margin-top: 30px;
+}
+
+/* 链接样式（非按钮）适配 */
+a {
+    color: #8ab4f8; /* 蓝色系链接，适配夜间模式 */
+    text-decoration: none;
+}
+
+a:hover {
+    color: #aecbfa;
+}
