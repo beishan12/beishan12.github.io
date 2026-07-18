@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>小天才自检模式校验码计算器</title>
+<title>小天才自检校验码计算器</title>
 <meta name="robots" content="index,follow">
     <style>
         body {
@@ -46,11 +46,11 @@
     </style>
 </head>
 <body>
-<h1 style="display:none;">自检模式校验码计算器</h1>
-    <h2>XTC自检模式校验码计算器</h2>
+<h1 style="display:none;">自检校验码计算器</h1>
+    <h2>XTC自检校验码计算器</h2>
     
     <div class="input-group">
-        <input type="text" id="codeInput" placeholder="请输入6位数字校验码..." maxlength="6">
+        <input type="text" id="codeInput" placeholder="请输入8位数字校验码" maxlength="8">
     </div>
     
     <button id="calculateBtn">计算</button>
@@ -61,70 +61,34 @@
     </div>
 
     <script>
-        // 仅保留自检计算逻辑
-        function calculateCode(input) {
-            try {
-                if (input.length !== 6) return "";
-                
-                const e = parseInt(input.substring(0, 2));
-                const o = parseInt(input.substring(2, 4));
-                const s = parseInt(input.substring(4)) ^ (e + o);
-                
-                const values1 = [e ^ s, o ^ s, s];
-                let str1 = "";
-                for (const val of values1) {
-                    str1 += val.toString().padStart(2, '0');
-                }
-                
-                const i = parseInt(str1.substring(0, 2));
-                const h = parseInt(str1.substring(2, 4));
-                const f = parseInt(str1.substring(4));
-                
-                const u = h ^ i;
-                const m = f ^ i;
-                const y = i ^ (u + m);
-                
-                const values2 = [u, m, y];
-                let result = "";
-                for (const val of values2) {
-                    result += val.toString().padStart(2, '0');
-                }
-                
-                return result;
-            } catch {
-                return "";
-            }
-        }
-
         function calculateV3Code(input) {
             try {
-                const e = 1; // 自检mode固定1
-                
+                const e = 1;
                 if (!/^\d+$/.test(input)) return "";
-                
+
                 const o = parseInt(input[7]) ^ e;
                 const n = (parseInt(input[o]) - o + 10) % 10;
-                
+
                 let s = "";
                 for (let i = 0; i < 7; i++) {
                     if (i === o) {
-                        s += n.toString();
+                        s += n;
                     } else {
                         const f = parseInt(input[i]);
-                        s += ((f + 10 - n) % 10).toString();
+                        s += ((f + 10 - n) % 10);
                     }
                 }
-                
+
                 const c = Math.floor(Math.random() * 7);
                 const a = parseInt(s[c]);
-                
+
                 let l = "";
                 for (let i = 0; i < 7; i++) {
                     const h = i === c ? c : a;
                     const f = parseInt(s[i]);
-                    l += ((f + h) % 10).toString();
+                    l += ((f + h) % 10);
                 }
-                
+
                 return l + (e ^ c).toString();
             } catch {
                 return "";
@@ -132,15 +96,13 @@
         }
 
         function calculate(input) {
-            if (input.length === 8) {
-                let result;
-                do {
-                    result = calculateV3Code(input);
-                } while (!result || result === input);
-                return result;
-            } else {
-                return calculateCode(input);
-            }
+            // 强制判断必须8位
+            if (input.length !== 8) return "";
+            let res;
+            do {
+                res = calculateV3Code(input);
+            } while (!res || res === input);
+            return res;
         }
 
         class Calculator {
@@ -150,58 +112,37 @@
                 this.resultContainer = document.getElementById("resultContainer");
                 this.resultTitle = document.getElementById("resultTitle");
                 this.resultValue = document.getElementById("resultValue");
-                
                 this.attachEventListeners();
             }
             
             attachEventListeners() {
-                this.calculateBtn.addEventListener("click", () => this.calculate());
-                
-                this.codeInput.addEventListener("keypress", (e) => {
-                    if (e.key === "Enter") this.calculate();
-                });
+                this.calculateBtn.addEventListener("click", () => this.calc());
+                this.codeInput.addEventListener("keypress", e => e.key === "Enter" && this.calc());
             }
             
-            calculate() {
+            calc() {
                 const input = this.codeInput.value.trim();
-                
-                if (!input) {
-                    this.showError("请输入校验码");
-                    return;
-                }
-                
-                if (!/^\d+$/.test(input)) {
-                    this.showError("校验码必须为数字");
-                    return;
-                }
-                
-                const result = calculate(input);
-                
-                if (!result) {
-                    this.showError("计算失败，请检查输入格式（自检6位 / V3 8位）");
-                } else {
-                    this.showSuccess(result);
-                }
+
+                const out = calculate(input);
+                if (!out) this.showError("计算失败，请重新输入");
+                else this.showSuccess(out);
             }
             
-            showError(message) {
+            showError(msg) {
                 this.resultContainer.className = "result error";
                 this.resultTitle.textContent = "错误";
-                this.resultValue.textContent = message;
+                this.resultValue.textContent = msg;
                 this.resultContainer.classList.remove("hidden");
             }
-            
-            showSuccess(result) {
+            showSuccess(val) {
                 this.resultContainer.className = "result success";
                 this.resultTitle.textContent = "计算结果";
-                this.resultValue.textContent = result;
+                this.resultValue.textContent = val;
                 this.resultContainer.classList.remove("hidden");
             }
         }
 
-        document.addEventListener("DOMContentLoaded", () => {
-            new Calculator();
-        });
+        document.addEventListener("DOMContentLoaded", () => new Calculator());
     </script>
 </body>
 </html>
